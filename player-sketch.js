@@ -29,6 +29,45 @@ function setup() {
     (p) => p.toLowerCase() === rawPlayerName.toLowerCase()
   ) || "Unknown";
 
+  // ─── NEW: INTERCEPT UNKNOWN PLAYERS ────────────────────────────────
+  if (playerName === "Unknown") {
+    createElement("h1", "Muffin Game");
+    createP("Please enter your player name, spelled exactly as it is registered on screen. oh, btw, nothing is case-sensitive");
+
+    // Use p5 to create a standard full-width login input
+    const loginInput = createInput("");
+    loginInput.attribute("placeholder", "Your Name");
+    loginInput.elt.focus();
+
+    const joinButton = createButton("Join Game");
+    joinButton.class("dedicate-btn"); // Steal this class for a nice styled button
+
+    // Function to handle the redirection
+    const navigateToPlayer = () => {
+      const enteredName = loginInput.value().trim();
+      if (enteredName) {
+        const newUrl = `${window.location.origin}${window.location.pathname}?player=${encodeURIComponent(enteredName)}`;
+        window.location.href = newUrl;
+      }
+    };
+
+    joinButton.mousePressed(navigateToPlayer);
+    
+    // Allow pressing 'Enter' to submit
+    loginInput.elt.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        navigateToPlayer();
+      }
+    });
+
+    // CRITICAL: Stop execution here so the rest of the game interface 
+    // doesn't render and it doesn't connect to Supabase as "Unknown"
+    return;
+  }
+  // ───────────────────────────────────────────────────────────────────
+
+  // Existing game setup code runs ONLY if player is valid:
   createElement("h1", playerName);
 
   pressesText = createP(pressesLabel());
@@ -38,10 +77,7 @@ function setup() {
   pressButton.mousePressed(handlePress);
   pressButton.class("press-btn");
 
-
   createElement("hr");
-
-  // createP("Fill in your dedication:");
 
   measureSpan = createSpan("");
   measureSpan.class("measure-span");
@@ -138,7 +174,7 @@ function checkForDuplicateName() {
     }
   }
   if (count > 1) {
-    statusText.html(`warning! ${playerName} is connected multiple times`);
+    statusText.html(`Warning! It seems like someone else is also connected to ${playerName}. Like, identity theft type beat, ya know?`);
   }
 }
 
