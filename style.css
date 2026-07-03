@@ -55,8 +55,6 @@ body.player-page input:not(.auto-grow-input) {
   margin: 8px 0;
 }
 
-/* Row of "I officially dedicate [__] muffins to [__]" —
-   wraps onto a new line automatically on narrow screens. */
 .dedication-line {
   display: flex;
   flex-wrap: wrap;
@@ -67,7 +65,7 @@ body.player-page input:not(.auto-grow-input) {
 }
 
 .auto-grow-input {
-  width: auto; /* Look mom, no !important! */
+  width: auto;
   min-width: 3ch;
   max-width: calc(100vw - 40px);
   display: inline-block;
@@ -79,7 +77,6 @@ body.player-page input:not(.auto-grow-input) {
   font: inherit;
 }
 
-/* Invisible element used only to measure text width; never shown. */
 .measure-span {
   position: absolute;
   visibility: hidden;
@@ -88,7 +85,6 @@ body.player-page input:not(.auto-grow-input) {
   font-family: inherit;
 }
 
-/* ---- Hub page ---- */
 body.hub-page {
   max-width: 480px;
   margin: 0 auto;
