@@ -160,10 +160,10 @@ function handleJoinMessage(payload) {
 
 function pressesLabel() {
   if (Number.isFinite(pressesRemainingLocal)){
-    return `Presses remaining: ${pressesRemainingLocal} / ${MAX_PRESSES}`;
+    return `${pressesRemainingLocal} / ${MAX_PRESSES} presses left`;
   }
   else{
-    return "Presses remaining: ?"
+    return "...getting data..."
   }
 }
 

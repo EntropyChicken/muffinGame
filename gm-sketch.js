@@ -199,7 +199,7 @@ function drawTimerAndRunner() {
   textAlign(CENTER, TOP);
 
   fill(245);
-  textSize(96);
+  textSize(111);
   text(formatOneDecimal(getRemainingSeconds()), width / 2, 30);
 
   textSize(34);
@@ -239,7 +239,7 @@ function drawPlayerList() {
     const isRunner = p === currentRunner && gameStatus !== "finished";
     fill(isRunner ? color(120, 220, 160) : color(200));
     text(
-      `${p}  —  ${pressesRemaining[p]} press${pressesRemaining[p] === 1 ? "" : "es"} remaining`,
+      `${p}  —  ${pressesRemaining[p]} press${pressesRemaining[p] === 1 ? "" : "es"} left`,
       x,
       y
     );

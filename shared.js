@@ -62,5 +62,8 @@ function formatOneDecimal(n) {
 }
 
 function formatMuffins(n) {
-  return parseFloat(n.toFixed(10)).toString();
+  if(n<1e-10){
+    return n;
+  }
+  return parseFloat(n.toFixed(12)).toString();
 }
