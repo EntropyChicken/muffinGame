@@ -8,8 +8,8 @@
 // ---- 1) SUPABASE CONFIG ---------------------------------------------------
 // Fill these in with your own project's values:
 // Supabase Dashboard -> Project Settings -> API
-const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+const SUPABASE_URL = "https://hwwthixvanursqmxebfq.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_zK-_D68FVdDzmMVUsPppBg_rJa7s0Mj";
 
 // One shared client, used by whichever page loads this file.
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
