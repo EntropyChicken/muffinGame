@@ -178,15 +178,29 @@ function handleDedicate() {
     return;
   }
 
-  const amount = parseFloat(amountInput.value().trim());
+  const rawAmount = amountInput.value().trim();
   const name = nameInput.value().trim();
 
-  if (isNaN(amount) || !name) {
-    statusText.html("Fill in a valid amount and a name first.");
+  // 1. Check if fields are empty
+  if (!rawAmount || !name) {
+    statusText.html("Fill in both an amount and a name first.");
     return;
   }
 
-  // OPTIMIZED: Send raw data instead of a long sentence string
+  // 2. Convert to number and check if it's a valid numeric value
+  const amount = parseFloat(rawAmount);
+  if (isNaN(amount)) {
+    statusText.html("Error: Amount must be a valid number.");
+    return;
+  }
+
+  // 3. Enforce the boundaries (between 0 and 6) locally
+  if (amount < 0 || amount > 6) {
+    statusText.html("Error: Dedication must be between 0 and 6 muffins.");
+    return;
+  }
+
+  // OPTIMIZED: Only fires if all data passes the checks above!
   channel.send({
     type: "broadcast",
     event: EVENTS.DEDICATE,
