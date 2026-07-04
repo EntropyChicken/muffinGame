@@ -38,6 +38,8 @@ let payoutAppliedThisRound = false;
 
 let nextRoundButton;
 
+let doTimeCrunchRedness = false;
+
 // FIREWORKS I MADE FROM LIKE... IDK. COVID DAYS. 7TH GRADE? LOLLLLLL
 let ganime = 0;
 let sanime = 222;
@@ -625,8 +627,12 @@ function drawBackground() {
     background(50 + 205 * buttonPressFlash);
   } 
   else {
-    let timeColor = getTimeColor();
-    background(lerpColor(color(0),timeColor,buttonPressFlash));
+    let redness = 0;
+    if(doTimeCrunchRedness && getRemainingSeconds()<18){
+      redness = max(0,1.5*max(8,18-getRemainingSeconds())*(1+sin(millis()*PI/4)));
+    }
+    let baseColor = color(redness,0,0);
+    background(lerpColor(baseColor,getTimeColor(),buttonPressFlash));
   }
   
   buttonPressFlash *= 0.9;
@@ -922,7 +928,7 @@ function renderRequestConsole() {
   const currentY = height - 70;
 
   if (requestedNamesQueue.length > 0) {
-    let title = createSpan("Pending Approval (right click to delete):");
+    let title = createSpan("Pending Approval:");
     title.position(currentX, currentY - 25);
     title.style("font-family", "monospace");
     title.style("color", "#ffb600");

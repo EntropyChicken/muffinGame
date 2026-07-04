@@ -102,7 +102,7 @@ function parseDedicationText(text) {
 
 function formatTimer(seconds) {
 
-	if (seconds < 20) {
+	if (seconds < 30) {
 		return Number(seconds).toFixed(1);
 	}
 

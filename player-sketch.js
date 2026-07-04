@@ -76,7 +76,7 @@ function renderRegistrationUI(attemptedName) {
   if (existingHeader) existingHeader.remove();
 
   createElement("h1", "Muffin Game");
-  const instructionText = createP("Please enter your player name to register:");
+  const instructionText = createP("Please enter your player name to register (nothing is case sensitive)");
   
   const loginInput = createInput("");
   loginInput.attribute("placeholder", "Your Name");
