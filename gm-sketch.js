@@ -829,12 +829,12 @@ function checkWinCondition() {
   if (gameStatus === "running") {
     if (keyIsDown(RIGHT_ARROW)) {
       let normalFrameMs = 1000 / frameRate();
-      let warpedMs = normalFrameMs * (timeSpeedMultiplier - 1); 
+      let warpedMs = normalFrameMs * (timeSpeedMultiplier - 1);
       timerEndTime -= warpedMs;
     }
     if (keyIsDown(LEFT_ARROW)) {
       let normalFrameMs = 1000 / frameRate();
-      let warpedMs = -2*normalFrameMs; 
+      let warpedMs = -normalFrameMs * (timeSpeedMultiplier + 1);
       timerEndTime -= warpedMs;
     }
 
