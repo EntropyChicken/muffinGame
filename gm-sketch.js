@@ -1114,7 +1114,7 @@ function getTimeColor() {
   let timeLeft = max(0, timerEndTime - Date.now());
   let progress = timeLeft / totalTime;
   colorMode(HSB, 360, 100, 100);
-  let timeColor = color((max(progress * 250 - 10, 0) + 360) % 360, 72, 100);
+  let timeColor = color((max(progress * 300 - 65, 0) + 360) % 360, 72, 100);
   colorMode(RGB, 255);
   return timeColor;
 }
