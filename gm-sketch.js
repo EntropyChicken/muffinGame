@@ -17,6 +17,7 @@ let isAuthenticated = false;
 let addPlayerInput;
 let requestedNamesQueue = []; // Holds strings of incoming requests
 let requestElements = [];     // Holds the DOM buttons we render
+let activelyConnectedPlayers = [];
 
 let gameStatus;       // "running" | "finished"
 let pressesRemaining; // { playerName: number }
@@ -314,7 +315,25 @@ function resetGameState() {
 function connectToSupabase() {
   channel = supabaseClient.channel(channelName);
   channel.on("broadcast", { event: EVENTS.JOIN }, (msg) => {
-    handleJoinMessage(msg.payload);
+    if (msg.payload && msg.payload.player) {
+      const pName = msg.payload.player;
+      if (!activelyConnectedPlayers.includes(pName)) {
+        activelyConnectedPlayers.push(pName);
+      }
+    }
+  });
+  channel.on("broadcast", { event: "VERIFY_SESSION" }, (msg) => {
+    if (msg.payload && msg.payload.player) {
+      const pName = msg.payload.player;
+      const isBusy = activelyConnectedPlayers.includes(pName);
+
+      // Broadcast back whether this specific name is already busy
+      channel.send({
+        type: "broadcast",
+        event: "VERIFY_SESSION_RESULT",
+        payload: { player: pName, isAlreadyConnected: isBusy }
+      });
+    }
   });
   channel.on("broadcast", { event: EVENTS.PRESS }, (msg) => {
     handlePressMessage(msg.payload);
@@ -332,7 +351,8 @@ function connectToSupabase() {
       event: "ROSTER_SYNC",
       payload: { 
         currentPlayers: players,
-        pressesRemaining: pressesRemaining 
+        pressesRemaining: pressesRemaining,
+        requestedNamesQueue: requestedNamesQueue
       }
     });
     channel.send({
@@ -438,7 +458,11 @@ function registerNewPlayer() {
     channel.send({
       type: "broadcast",
       event: "ROSTER_SYNC",
-      payload: { currentPlayers: players, pressesRemaining: pressesRemaining }
+      payload: { 
+        currentPlayers: players, 
+        pressesRemaining: pressesRemaining,
+        requestedNamesQueue: requestedNamesQueue
+      }
     });
 
     channel.send({
@@ -549,23 +573,29 @@ function handleNameRequest(payload) {
   const name = payload && payload.requestedName ? payload.requestedName.trim() : null;
   if (!name) return;
 
-  const existing = players.find(p => p.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    channel.send({
-      type: "broadcast",
-      event: EVENTS.APPROVE,
-      payload: { approvedName: existing }
-    });
+  const nameLower = name.toLowerCase();
+  const existing = players.some(p => p.toLowerCase() === nameLower);
+  const isPending = requestedNamesQueue.some(p => p.toLowerCase() === nameLower);
+
+  // If it's already officially in or waiting, ignore any secondary adversarial network requests
+  if (existing || isPending) {
     return;
   }
 
-  if (requestedNamesQueue.includes(name)) return;
+  // Safe new unique request
   requestedNamesQueue.push(name);
 
   const maxVisibleRequests = 1000;
   if (requestedNamesQueue.length > maxVisibleRequests) {
     requestedNamesQueue.shift();
   }
+
+  // Broadcast the updated queue to all players
+  channel.send({
+    type: "broadcast",
+    event: "ROSTER_SYNC",
+    payload: { currentPlayers: players, pressesRemaining: pressesRemaining, requestedNamesQueue: requestedNamesQueue }
+  });
 
   renderRequestConsole();
 }
@@ -969,8 +999,12 @@ function renderRequestConsole() {
           payload: { deniedName: candidateName }
         });
       }
-
       requestedNamesQueue.splice(i, 1);
+      channel.send({
+        type: "broadcast",
+        event: "ROSTER_SYNC",
+        payload: { currentPlayers: players, pressesRemaining: pressesRemaining, requestedNamesQueue: requestedNamesQueue }
+      });
       renderRequestConsole();
     });
 

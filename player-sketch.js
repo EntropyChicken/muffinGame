@@ -22,6 +22,7 @@ let measureSpan;
 let mainLayout, leftCol, centerCol, rightCol;
 
 let rawPlayerName = "Unknown";
+let pendingQueue = [];
 
 async function setup() {
   noCanvas();
@@ -36,31 +37,100 @@ async function setup() {
 
   connectToSupabase();
 
+  // ========================================================
+  // 1. BULLETPROOF LOCAL CROSS-TAB DUPLICATE GUARD
+  // ========================================================
+  const myTabId = Math.random().toString(36).substring(2, 9);
+  const tabChannelName = `muffin_session_${rawPlayerName.toLowerCase()}`;
+  const localTabChannel = new BroadcastChannel(tabChannelName);
+  let isDuplicateTab = false;
+
+  localTabChannel.onmessage = (event) => {
+    // Ignore our own echoed messages entirely
+    if (!event.data || event.data.senderId === myTabId) return;
+
+    // Challenge: An external tab is asking if anyone is here
+    if (event.data.type === "PING_EXISTING") {
+      // Only respond if this specific tab is fully alive and rendering the active game podium
+      if (window.podiumUiRendered) {
+        localTabChannel.postMessage({ type: "I_AM_ALREADY_HERE", senderId: myTabId });
+      }
+    } 
+    // Response: An active tab confirmed it is already running the game
+    else if (event.data.type === "I_AM_ALREADY_HERE") {
+      if (!window.podiumUiRendered && !isDuplicateTab) {
+        isDuplicateTab = true;
+        
+        // Block the duplicate window and render the Access Denied UI layout
+        document.body.innerHTML = "";
+        let errorBox = createDiv();
+        errorBox.style("max-width", "500px");
+        errorBox.style("margin", "100px auto");
+        errorBox.style("text-align", "center");
+        errorBox.style("font-family", "monospace");
+        errorBox.style("padding", "20px");
+
+        createElement("h1", "Access Denied").parent(errorBox);
+        let alertText = createP(`<span style="color:#ff6666; font-weight:bold;">DUPLICATE SESSION DETECTED.</span><br>"${rawPlayerName}" is already actively playing in another window or tab.`);
+        alertText.parent(errorBox);
+        alertText.style("margin-bottom", "30px");
+        alertText.style("line-height", "1.6");
+
+        let homeButton = createButton("Return to Sign-Up Screen").parent(errorBox);
+        homeButton.class("dedicate-btn");
+        homeButton.mousePressed(() => {
+          localTabChannel.close();
+          window.location.href = window.location.origin + window.location.pathname;
+        });
+      }
+    }
+  };
+
+  // Broadcast out a check query to see if any real active windows are listening
+  localTabChannel.postMessage({ type: "PING_EXISTING", senderId: myTabId });
+
+  // ========================================================
+  // 2. OMNI-ROSTER GAME STATE BROADCAST LISTENER
+  // ========================================================
   channel.on("broadcast", { event: "ROSTER_SYNC" }, (msg) => {
     if (msg.payload && msg.payload.currentPlayers) {
       let msgEl = document.getElementById("gm-waiting-message");
       if (msgEl) msgEl.remove();
 
       const activePlayers = msg.payload.currentPlayers;
-      const found = activePlayers.find(p => p.toLowerCase() === rawPlayerName.toLowerCase());
+      pendingQueue = msg.payload.requestedNamesQueue || [];
 
+      const found = activePlayers.find(p => p.toLowerCase() === rawPlayerName.toLowerCase());
 
       if (found) {
         playerName = found;
-        if (!window.podiumUiRendered) {
-          initializeActivePlayerPodium();
-          channel.send({
-            type: "broadcast",
-            event: EVENTS.JOIN,
-            payload: { player: playerName }
-          });
+
+        // CRITICAL FIX: Extract local variable metric syncing out of the timeout 
+        // so the player state never freezes or catches an uninitialized -Infinity hook!
+        if (msg.payload.pressesRemaining && msg.payload.pressesRemaining[playerName] !== undefined) {
+          pressesRemainingLocal = msg.payload.pressesRemaining[playerName];
+          if (pressesText) pressesText.html(pressesLabel());
         }
+
+        // Defer UI layout mounting briefly to let the tab channel catch duplicate messages
+        setTimeout(() => {
+          if (isDuplicateTab) return; // Halt initialization completely if an attacker was flagged
+
+          if (!window.podiumUiRendered) {
+            initializeActivePlayerPodium();
+            // Refresh layout string content elements immediately upon structure generation
+            if (pressesText) pressesText.html(pressesLabel());
+            
+            channel.send({
+              type: "broadcast",
+              event: EVENTS.JOIN,
+              payload: { player: playerName }
+            });
+          }
+        }, 80);
       }
       else {
-        if (
-          !window.registrationUiRendered &&
-          !window.podiumUiRendered
-        ) {
+        if (!window.registrationUiRendered && !window.podiumUiRendered) {
           renderRegistrationUI(rawPlayerName);
         }
       }
@@ -121,10 +191,19 @@ function renderRegistrationUI(attemptedName) {
       return;
     }
 
-    const existingMatch = players.find(p => p.toLowerCase() === enteredName.toLowerCase());
-    if (existingMatch) {
-      const newUrl = `${window.location.origin}${window.location.pathname}?player=${encodeURIComponent(existingMatch)}`;
-      window.location.href = newUrl;
+    const nameLower = enteredName.toLowerCase();
+
+    // Local Guard: Check if the name is already playing officially
+    const isAlreadyPlayer = players.some(p => p.toLowerCase() === nameLower);
+    if (isAlreadyPlayer) {
+      instructionText.html(`<span style="color:#ff6666">"${enteredName}" is already taken by an active player!</span>`);
+      return;
+    }
+
+    // Local Guard: Check if someone else got in line first
+    const isAlreadyPending = pendingQueue.some(p => p.toLowerCase() === nameLower);
+    if (isAlreadyPending) {
+      instructionText.html(`<span style="color:#ff6666">"${enteredName}" is currently pending GM review. Choose another name!</span>`);
       return;
     }
 
@@ -167,7 +246,7 @@ function connectToSupabase() {
   channel.on("broadcast", { event: "ROSTER_SYNC" }, (msg) => {
     if (msg.payload && msg.payload.currentPlayers) {
       players = msg.payload.currentPlayers; 
-      
+      pendingQueue = msg.payload.requestedNamesQueue || [];
       if (playerName !== "Unknown" && msg.payload.pressesRemaining) {
         pressesRemainingLocal = msg.payload.pressesRemaining[playerName];
         if (pressesText) pressesText.html(pressesLabel());

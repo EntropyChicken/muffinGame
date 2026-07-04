@@ -139,3 +139,10 @@ html, body {
   transform: scale(0.98);
   transition: transform 0.05s ease;
 }
+
+button:disabled, input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(100%);
+  pointer-events: none;
+}
