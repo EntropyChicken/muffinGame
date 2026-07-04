@@ -613,8 +613,6 @@ function drawWaitingRoom() {
 }
 
 function drawBackground() {
-  buttonPressFlash *= 0.9; // Rapid decay
-
   if (gameStatus === "finished") {
     fill(0, 30);
     rect(0, 0, width, height);
@@ -627,6 +625,8 @@ function drawBackground() {
     let timeColor = getTimeColor();
     background(lerpColor(color(0),timeColor,buttonPressFlash));
   }
+  
+  buttonPressFlash *= 0.9;
 }
 
 function runFireworkEngine() {
