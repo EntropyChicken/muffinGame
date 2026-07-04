@@ -147,7 +147,18 @@ async function setup() {
   }
 
   nextRoundButton = createButton("Start Next Round");
-  nextRoundButton.position(20,20);
+  nextRoundButton.style("position", "fixed");
+  nextRoundButton.style("bottom", "20px");
+  nextRoundButton.style("right", "260px");   // leaves room for the Add player input
+  nextRoundButton.style("padding", "8px 12px");
+  nextRoundButton.style("font-family", "monospace");
+  nextRoundButton.style("font-size", "16px");
+  nextRoundButton.style("background", "#333");
+  nextRoundButton.style("color", "#fff");
+  nextRoundButton.style("border", "1px solid #555");
+  nextRoundButton.style("border-radius", "4px");
+  nextRoundButton.style("cursor", "pointer");
+  nextRoundButton.style("z-index", "10000");
   nextRoundButton.mousePressed(startNextRound);
 
   addPlayerInput = createInput("");
@@ -452,7 +463,7 @@ function handlePressMessage(payload) {
     return;
   }
 
-  buttonPressFlash += 0.7; 
+  buttonPressFlash += 1; 
 
   pressesRemaining[player]--;
   currentRunner = player;
@@ -571,23 +582,34 @@ function draw() {
 }
 
 function drawWaitingRoom() {
-  noStroke();
-  for(let i = 0; i<3; i++){
-    fill(random(100,255),random(40,120));
-    let rad = 5+pow(random(0,1.1),6)*40;
-    ellipse(random(-rad,width+rad),random(-rad,height+rad),rad*2,rad*2);
+  push();
+  noFill();
+  strokeWeight(10);
+  let high = min(255,random(100,300));
+  let alpha = random(50,150);
+  if(random(0,2)<1){
+    stroke(high,high*0.4,0,alpha);
   }
+  else{
+    stroke(0,high*0.8,high,alpha);
+  }
+  let rad = pow(random(0,1.1),6)*40+20;
+  let x = random(-rad,width+rad);
+  let y = random(-rad,height+rad);
+  ellipse(x,y,rad*2,rad*2);
   if(random(0,3)<1){
     fill(0,6);
+    noStroke();
     rect(-1,-1,width+2,height+2);
   }
+  pop();
 }
 
 function drawBackground() {
-  buttonPressFlash *= 0.6; // Rapid decay
+  buttonPressFlash *= 0.9; // Rapid decay
 
   if (gameStatus === "finished") {
-    fill(0, 40);
+    fill(0, 30);
     rect(0, 0, width, height);
     runFireworkEngine();
   } 
@@ -595,7 +617,8 @@ function drawBackground() {
     background(50 + 205 * buttonPressFlash);
   } 
   else {
-    background(255 * buttonPressFlash);
+    let timeColor = getTimeColor();
+    background(lerpColor(color(0),timeColor,buttonPressFlash));
   }
 }
 

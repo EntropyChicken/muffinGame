@@ -24,9 +24,9 @@ const channelName = "muffin-game-channel";
 // (Game Master overwrites these at startup and syncs them)
 // ==========================================================
 
-let maxPresses = 5;
-let runDurationSeconds = 100;
 let maxMuffins = 6;
+let runDurationSeconds = 100;
+let maxPresses = 5;
 
 
 // ==========================================================
