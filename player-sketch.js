@@ -50,14 +50,14 @@ async function setup() {
     if (!event.data || event.data.senderId === myTabId) return;
 
     // Challenge: An external tab is asking if anyone is here
-    if (event.data.type === "PING_EXISTING") {
+    if (event.data.type === EVENTS.PING_EXISTING) {
       // Only respond if this specific tab is fully alive and rendering the active game podium
       if (window.podiumUiRendered) {
-        localTabChannel.postMessage({ type: "I_AM_ALREADY_HERE", senderId: myTabId });
+        localTabChannel.postMessage({ type: EVENTS.I_AM_ALREADY_HERE, senderId: myTabId });
       }
     } 
     // Response: An active tab confirmed it is already running the game
-    else if (event.data.type === "I_AM_ALREADY_HERE") {
+    else if (event.data.type === EVENTS.I_AM_ALREADY_HERE) {
       if (!window.podiumUiRendered && !isDuplicateTab) {
         isDuplicateTab = true;
         
@@ -87,12 +87,12 @@ async function setup() {
   };
 
   // Broadcast out a check query to see if any real active windows are listening
-  localTabChannel.postMessage({ type: "PING_EXISTING", senderId: myTabId });
+localTabChannel.postMessage({ type: EVENTS.PING_EXISTING, senderId: myTabId });
 
   // ========================================================
   // 2. OMNI-ROSTER GAME STATE BROADCAST LISTENER
   // ========================================================
-  channel.on("broadcast", { event: "ROSTER_SYNC" }, (msg) => {
+  channel.on("broadcast", { event: EVENTS.ROSTER_SYNC }, (msg) => {
     if (msg.payload && msg.payload.currentPlayers) {
       let msgEl = document.getElementById("gm-waiting-message");
       if (msgEl) msgEl.remove();
@@ -236,6 +236,11 @@ function connectToSupabase() {
     window.location.reload();
   });
 
+  channel.on("broadcast", { event: EVENTS.PLAYER_REMOVED }, (msg) => {
+    if (msg.payload && msg.payload.player && msg.payload.player.toLowerCase() === playerName.toLowerCase()) {
+      window.location.href = window.location.origin + window.location.pathname;
+    }
+  });
   
   channel.on("broadcast", { event: EVENTS.STATE_SYNC }, (msg) => {
     if (msg.payload.player === playerName) {
@@ -243,7 +248,7 @@ function connectToSupabase() {
       if (pressesText) pressesText.html(pressesLabel());
     }
   });
-  channel.on("broadcast", { event: "ROSTER_SYNC" }, (msg) => {
+  channel.on("broadcast", { event: EVENTS.ROSTER_SYNC }, (msg) => {
     if (msg.payload && msg.payload.currentPlayers) {
       players = msg.payload.currentPlayers; 
       pendingQueue = msg.payload.requestedNamesQueue || [];

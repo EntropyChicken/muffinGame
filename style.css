@@ -18,8 +18,15 @@ body {
 body.gm-page {
   background: var(--bg-dark);
   color: var(--fg-light);
-  display: flex;
-  justify-content: center;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  height: 100%;
+}
+
+body.gm-page canvas {
+  display: block;
 }
 
 /* ---- Player page: simple, mobile-friendly ---- */

@@ -165,14 +165,14 @@ async function setup() {
   nextRoundButton.mousePressed(startNextRound);
 
   addPlayerInput = createInput("");
-  addPlayerInput.attribute("placeholder", "Add player...");
+  addPlayerInput.attribute("placeholder", "Remove player");
   addPlayerInput.style("position", "fixed");
   addPlayerInput.style("bottom", "20px");
   addPlayerInput.style("right", "144px");
   addPlayerInput.style("padding", "8px 12px");
   addPlayerInput.style("font-family", "monospace");
   addPlayerInput.style("font-size", "16px");
-  addPlayerInput.style("width", "140px");             // Added a fixed compact width
+  addPlayerInput.style("width", "140px");
   addPlayerInput.style("background", "#333");
   addPlayerInput.style("color", "#fff");
   addPlayerInput.style("border", "1px solid #555");
@@ -326,7 +326,7 @@ function connectToSupabase() {
       }
     }
   });
-  channel.on("broadcast", { event: "VERIFY_SESSION" }, (msg) => {
+  channel.on("broadcast", { event: EVENTS.VERIFY_SESSION }, (msg) => {
     if (msg.payload && msg.payload.player) {
       const pName = msg.payload.player;
       const isBusy = activelyConnectedPlayers.includes(pName);
@@ -334,7 +334,7 @@ function connectToSupabase() {
       // Broadcast back whether this specific name is already busy
       channel.send({
         type: "broadcast",
-        event: "VERIFY_SESSION_RESULT",
+        event: EVENTS.VERIFY_SESSION_RESULT,
         payload: { player: pName, isAlreadyConnected: isBusy }
       });
     }
@@ -349,10 +349,10 @@ function connectToSupabase() {
     handleNameRequest(msg.payload);
   });
 
-  channel.on("broadcast", { event: "REQUEST_ROSTER" }, () => {
+  channel.on("broadcast", { event: EVENTS.REQUEST_ROSTER }, () => {
     channel.send({
       type: "broadcast",
-      event: "ROSTER_SYNC",
+      event: EVENTS.ROSTER_SYNC,
       payload: { 
         currentPlayers: players,
         pressesRemaining: pressesRemaining,
@@ -378,7 +378,7 @@ function connectToSupabase() {
       setTimeout(() => {
         channel.send({
           type: "broadcast",
-          event: "GAME_RESET",
+          event: EVENTS.GAME_RESET,
           payload: {}
         });
       }, 500);
@@ -410,7 +410,7 @@ function handleJoinMessage(payload) {
   
   channel.send({
     type: "broadcast",
-    event: "ROSTER_SYNC",
+    event: EVENTS.ROSTER_SYNC,
     payload: { currentPlayers: players, pressesRemaining: pressesRemaining }
   });
 
@@ -464,7 +464,7 @@ function removePlayerFromGame(playerName) {
   if (channel) {
     channel.send({
       type: "broadcast",
-      event: "ROSTER_SYNC",
+      event: EVENTS.ROSTER_SYNC,
       payload: {
         currentPlayers: players,
         pressesRemaining: pressesRemaining,
@@ -476,6 +476,12 @@ function removePlayerFromGame(playerName) {
       type: "broadcast",
       event: EVENTS.DEDICATIONS_SYNC,
       payload: { dedicationMax }
+    });
+
+    channel.send({
+      type: "broadcast",
+      event: EVENTS.PLAYER_REMOVED,
+      payload: { player: playerName }
     });
   }
 
@@ -526,7 +532,7 @@ function registerNewPlayer() {
 
     channel.send({
       type: "broadcast",
-      event: "ROSTER_SYNC",
+      event: EVENTS.ROSTER_SYNC,
       payload: { 
         currentPlayers: players, 
         pressesRemaining: pressesRemaining,
@@ -662,7 +668,7 @@ function handleNameRequest(payload) {
   // Broadcast the updated queue to all players
   channel.send({
     type: "broadcast",
-    event: "ROSTER_SYNC",
+    event: EVENTS.ROSTER_SYNC,
     payload: { currentPlayers: players, pressesRemaining: pressesRemaining, requestedNamesQueue: requestedNamesQueue }
   });
 
@@ -1002,9 +1008,9 @@ function drawDedicationLog() {
 function drawConnectionStatus() {
   textFont("monospace");
   textAlign(RIGHT, BOTTOM);
-  textSize(11);
+  textSize(10);
   fill(90);
-  text(`realtime: ${channelStatusText}`, width - 10, height - 10);
+  text(`realtime: ${channelStatusText}`, width - 5, height - 5);
 }
 
 function getTimeColor() {
@@ -1071,7 +1077,7 @@ function renderRequestConsole() {
       requestedNamesQueue.splice(i, 1);
       channel.send({
         type: "broadcast",
-        event: "ROSTER_SYNC",
+        event: EVENTS.ROSTER_SYNC,
         payload: { currentPlayers: players, pressesRemaining: pressesRemaining, requestedNamesQueue: requestedNamesQueue }
       });
       renderRequestConsole();
