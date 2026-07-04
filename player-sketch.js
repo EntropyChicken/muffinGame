@@ -44,16 +44,25 @@ async function setup() {
       const activePlayers = msg.payload.currentPlayers;
       const found = activePlayers.find(p => p.toLowerCase() === rawPlayerName.toLowerCase());
 
+
       if (found) {
         playerName = found;
-        initializeActivePlayerPodium();
-      } else {
-        playerName = "Unknown";
-        if (rawPlayerName !== "Unknown") {
-          window.history.replaceState(null, '', window.location.pathname);
-          rawPlayerName = "Unknown";
+        if (!window.podiumUiRendered) {
+          initializeActivePlayerPodium();
+          channel.send({
+            type: "broadcast",
+            event: EVENTS.JOIN,
+            payload: { player: playerName }
+          });
         }
-        renderRegistrationUI(rawPlayerName);
+      }
+      else {
+        if (
+          !window.registrationUiRendered &&
+          !window.podiumUiRendered
+        ) {
+          renderRegistrationUI(rawPlayerName);
+        }
       }
     }
   });
@@ -148,13 +157,13 @@ function connectToSupabase() {
     window.location.reload();
   });
 
+  
   channel.on("broadcast", { event: EVENTS.STATE_SYNC }, (msg) => {
     if (msg.payload.player === playerName) {
       pressesRemainingLocal = msg.payload.pressesRemaining;
       if (pressesText) pressesText.html(pressesLabel());
     }
   });
-
   channel.on("broadcast", { event: "ROSTER_SYNC" }, (msg) => {
     if (msg.payload && msg.payload.currentPlayers) {
       players = msg.payload.currentPlayers; 

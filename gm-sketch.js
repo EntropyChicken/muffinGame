@@ -30,7 +30,7 @@ let dedicationLog;    // [{ time, from, to, amount }], oldest first
 let channel;
 let channelStatusText = "connecting...";
 
-let timeSpeedMultiplier = 10;
+let timeSpeedMultiplier = 20;
 let buttonPressFlash = 0;
 let playerWealth = {};
 let leaderboardHeld = false;
@@ -360,14 +360,21 @@ function connectToSupabase() {
 }
 
 function handleJoinMessage(payload) {
-  const player = payload && payload.player;
+  const rawPlayer = payload && payload.player;
+  const player = players.find(
+    p => p.toLowerCase() === (rawPlayer || "").toLowerCase()
+  );
+
+  if (!player) {
+    console.log("Unknown player:", rawPlayer);
+    return;
+  }
   const playerExists = players.some((p) => p.toLowerCase() === (player || "").toLowerCase());
 
   if (!playerExists) {
     console.log(`Unrecognized player "${player}" tried to join.`);
     return;
   }
-
   channel.send({
     type: "broadcast",
     event: EVENTS.STATE_SYNC,
