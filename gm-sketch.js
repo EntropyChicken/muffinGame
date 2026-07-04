@@ -238,7 +238,7 @@ async function checkGMPasswordHashed() {
     muffinInput.style('padding', '8px'); muffinInput.style('font-size', '16px'); muffinInput.style('width', '120px');
     muffinInput.style('text-align', 'center'); muffinInput.style('background', '#222'); muffinInput.style('color', '#fff'); muffinInput.style('border', '1px solid #555'); muffinInput.style('border-radius', '4px');
 
-    let timerInput = createInput("100").parent(settingsRow);
+    let timerInput = createInput("60").parent(settingsRow);
     timerInput.attribute("placeholder", "Timer Seconds");
     timerInput.style('padding', '8px'); timerInput.style('font-size', '16px'); timerInput.style('width', '120px');
     timerInput.style('text-align', 'center'); timerInput.style('background', '#222'); timerInput.style('color', '#fff'); timerInput.style('border', '1px solid #555'); timerInput.style('border-radius', '4px');
@@ -269,13 +269,13 @@ async function checkGMPasswordHashed() {
       
       if (await sha256HashHex(entered) === gameMasterPasswordHash) {
         maxMuffins = parseFloat(muffinInput.value()) || 6;
-        runDurationSeconds = parseFloat(timerInput.value()) || 100;
-        maxPresses = parseInt(pressesInput.value()) || 5; // ADD THIS LINE
+        runDurationSeconds = parseFloat(timerInput.value()) || 60;
+        maxPresses = parseInt(pressesInput.value()) || 5;
         
         channel.send({
           type: "broadcast",
           event: EVENTS.SETTINGS_SYNC,
-          payload: { maxMuffins, runDurationSeconds, maxPresses } // ADD maxPresses HERE
+          payload: { maxMuffins, runDurationSeconds, maxPresses }
         });
         
         resetGameState();
@@ -781,8 +781,8 @@ function drawBackground() {
     backgroundColor.setAlpha(buttonPressFlash);
     
     if(getRemainingSeconds()>10){
-      drawWaitingRoom(1.002,0.08,1,0.1,getTimeColor());
-      background(0,max(150,map(sqrt(map(getRemainingSeconds(),10,runDurationSeconds,0,1)),0,1,255,50)));
+      drawWaitingRoom(1.0015,0.06,1,0.1,getTimeColor());
+      background(0,max(170,map(sqrt(map(getRemainingSeconds(),10,runDurationSeconds,0,1)),0,1,255,100)));
     }
     else{
       background(0);

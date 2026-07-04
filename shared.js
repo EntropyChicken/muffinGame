@@ -25,7 +25,7 @@ const channelName = "muffin-game-channel";
 // ==========================================================
 
 let maxMuffins = 6;
-let runDurationSeconds = 100;
+let runDurationSeconds = 60;
 let maxPresses = 5;
 
 
@@ -108,7 +108,7 @@ function parseDedicationText(text) {
 
 function formatTimer(seconds) {
 
-	if (seconds < 30) {
+	if (seconds < 20) {
 		return Number(seconds).toFixed(1);
 	}
 
