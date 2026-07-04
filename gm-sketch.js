@@ -129,7 +129,7 @@ let qrImg;
 let cnv; // <-- Declare it here globally
 
 function preload() {
-  qrImg = loadImage('qrcode_entropychicken.github.io.png');
+  qrImg = loadImage('join_qrcode.png');
 }
 
 
@@ -201,7 +201,7 @@ async function checkGMPasswordHashed() {
     qrLabel.style('color', '#ffffff'); qrLabel.style('font-size', '24px'); qrLabel.style('margin', '0');
 
     // 3. Row item 2: Native HTML image loading the PNG file directly
-    let qrCodeImg = createImg('qrcode_entropychicken.github.io.png', 'Player QR Code').parent(overlay);
+    let qrCodeImg = createImg('join_qrcode.github.io.png', 'Player QR Code').parent(overlay);
     qrCodeImg.style('width', '300px');
     qrCodeImg.style('height', '300px');
     qrCodeImg.style('margin-bottom', '20px'); // Give some extra padding before the password section
