@@ -112,9 +112,6 @@ html, body {
   font-weight: 600;        /* Makes the text slightly bold */
   margin: 15px auto 0 auto; /* Centers it and adds some breathing room on top */
 }
-.dedicate-btn:hover {
-  filter: brightness(1.1);
-}
 
 .press-btn {
   display: block;          /* Puts it on its own line below the inputs */
@@ -129,6 +126,16 @@ html, body {
   font-weight: 600;        /* Makes the text slightly bold */
   margin: 15px auto 0 auto; /* Centers it and adds some breathing room on top */
 }
-.press-btn:hover {
-  filter: brightness(1.1);
+
+@media (hover: hover) {
+  .dedicate-btn:hover,
+  .press-btn:hover {
+    filter: brightness(1.1);
+  }
+}
+.dedicate-btn:active,
+.press-btn:active {
+  filter: brightness(0.85);
+  transform: scale(0.98);
+  transition: transform 0.05s ease;
 }
