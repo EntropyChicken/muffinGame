@@ -1,0 +1,21 @@
+{
+  "name": "MuffinGame",
+  "short_name": "MuffinGame",
+  "icons": [
+    {
+      "src": "/assets/muffinGameLogoNoBackground/web-app-manifest-192x192.png?v=20260704",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/muffinGameLogoNoBackground/web-app-manifest-512x512.png?v=20260704",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}
