@@ -19,12 +19,13 @@ let pressesText, statusText;
 let amountInput, nameInput;
 let measureSpan;
 
+let mainLayout, leftCol, centerCol, rightCol;
+
 let rawPlayerName = "Unknown";
 
 async function setup() {
   noCanvas();
   
-  // Show a clean placeholder status right away while waiting for the GM
   let loadingText = createP("Waiting for a Game Master...");
   loadingText.id("gm-waiting-message");
   loadingText.style("font-family", "monospace");
@@ -37,7 +38,6 @@ async function setup() {
 
   channel.on("broadcast", { event: "ROSTER_SYNC" }, (msg) => {
     if (msg.payload && msg.payload.currentPlayers) {
-      // Clear the waiting message once the GM responds
       let msgEl = document.getElementById("gm-waiting-message");
       if (msgEl) msgEl.remove();
 
@@ -112,8 +112,7 @@ function renderRegistrationUI(attemptedName) {
       return;
     }
 
-    // ─── FIX: Fast-track bypassing! If the name is already in the game, log them right in ───
-    const existingMatch = PLAYERS.find(p => p.toLowerCase() === enteredName.toLowerCase());
+    const existingMatch = players.find(p => p.toLowerCase() === enteredName.toLowerCase());
     if (existingMatch) {
       const newUrl = `${window.location.origin}${window.location.pathname}?player=${encodeURIComponent(existingMatch)}`;
       window.location.href = newUrl;
@@ -153,15 +152,14 @@ function connectToSupabase() {
   channel.on("broadcast", { event: EVENTS.STATE_SYNC }, (msg) => {
     if (msg.payload.player === playerName) {
       pressesRemainingLocal = msg.payload.pressesRemaining;
-      pressesText.html(pressesLabel());
+      if (pressesText) pressesText.html(pressesLabel());
     }
   });
 
   channel.on("broadcast", { event: "ROSTER_SYNC" }, (msg) => {
     if (msg.payload && msg.payload.currentPlayers) {
-      PLAYERS = msg.payload.currentPlayers; 
+      players = msg.payload.currentPlayers; 
       
-      // ─── FIX: Instantly catch our presses if we are fully loaded in ───
       if (playerName !== "Unknown" && msg.payload.pressesRemaining) {
         pressesRemainingLocal = msg.payload.pressesRemaining[playerName];
         if (pressesText) pressesText.html(pressesLabel());
@@ -169,10 +167,27 @@ function connectToSupabase() {
     }
   });
 
+  channel.on("broadcast", { event: EVENTS.SETTINGS_SYNC }, (msg) => {
+    if (msg.payload) {
+      maxMuffins = msg.payload.maxMuffins;
+      runDurationSeconds = msg.payload.runDurationSeconds;
+      maxPresses = msg.payload.maxPresses; // ADD THIS LINE
+      if (pressesText) pressesText.html(pressesLabel()); // Re-render label to match the new dynamic ceiling
+    }
+  });
+  channel.on("broadcast", { event: EVENTS.DEDICATE_ERROR }, (msg) => {
+    if (msg.payload && msg.payload.player === playerName) {
+      if (statusText) statusText.html(msg.payload.message);
+    }
+  });
+  channel.on("broadcast", { event: EVENTS.DEDICATIONS_SYNC }, (msg) => {
+    if (msg.payload && msg.payload.dedicationMax) {
+      renderDedicationsLists(msg.payload.dedicationMax);
+    }
+  });
   channel.on("presence", { event: "sync" }, () => {
     checkForDuplicateName();
   });
-
   channel.subscribe(async (status) => {
     channelReady = status === "SUBSCRIBED";
     if (status === "SUBSCRIBED") {
@@ -205,7 +220,7 @@ function handleDedicate() {
     return;
   }
 
-  const recipientExists = PLAYERS.some(
+  const recipientExists = players.some(
     (p) => p.toLowerCase() === name.toLowerCase()
   );
 
@@ -220,8 +235,8 @@ function handleDedicate() {
     return;
   }
 
-  if (amount < 0 || amount > MAX_MUFFINS) {
-    statusText.html(`ERROR: Dedication must be between 0 and ${MAX_MUFFINS} muffins.`);
+  if (amount < 0 || amount > maxMuffins) {
+    statusText.html(`ERROR: Dedication must be between 0 and ${maxMuffins} muffins.`);
     return;
   }
 
@@ -235,28 +250,46 @@ function handleDedicate() {
 }
 
 function initializeActivePlayerPodium() {
-  // If we are already building the board, back out
   if (window.podiumUiRendered) return;
   window.podiumUiRendered = true;
 
-  // Wipe any registration text boxes out of the DOM structure completely
   document.body.innerHTML = "";
 
-  createElement("h1", playerName);
+  mainLayout = createDiv();
+  mainLayout.style('display', 'flex');
+  mainLayout.style('justify-content', 'space-between');
+  mainLayout.style('width', '100%');
+  mainLayout.style('max-width', '1200px');
+  mainLayout.style('margin', '0 auto');
+  mainLayout.style('padding', '20px');
+  mainLayout.style('box-sizing', 'border-box');
 
-  pressesText = createP(pressesLabel());
+  leftCol = createDiv().parent(mainLayout);
+  leftCol.style('flex', '1').style('text-align', 'left').style('padding', '0 20px');
+  leftCol.html("<h3 style='color: #ffb600; font-family: monospace;'>Dedications FROM Others</h3><div id='from-list' style='font-family: monospace; color: #ddd;'><p>Loading...</p></div>");
+
+  centerCol = createDiv().parent(mainLayout);
+  centerCol.style('flex', '2').style('text-align', 'center');
+
+  rightCol = createDiv().parent(mainLayout);
+  rightCol.style('flex', '1').style('text-align', 'right').style('padding', '0 20px');
+  rightCol.html("<h3 style='color: #ffb600; font-family: monospace;'>Dedications TO Others</h3><div id='to-list' style='font-family: monospace; color: #ddd;'><p>Loading...</p></div>");
+
+  createElement("h1", playerName).parent(centerCol);
+
+  pressesText = createP(pressesLabel()).parent(centerCol);
   pressesText.style("font-family", "monospace");
 
-  const pressButton = createButton("Become the Runner");
+  const pressButton = createButton("Become the Runner").parent(centerCol);
   pressButton.mousePressed(handlePress);
   pressButton.class("press-btn");
 
-  createElement("hr");
+  createElement("hr").parent(centerCol);
 
-  measureSpan = createSpan("");
+  measureSpan = createSpan("").parent(centerCol);
   measureSpan.class("measure-span");
 
-  const dedicationLine = createDiv();
+  const dedicationLine = createDiv().parent(centerCol);
   dedicationLine.class("dedication-line");
 
   createSpan("I officially dedicate").parent(dedicationLine);
@@ -282,19 +315,47 @@ function initializeActivePlayerPodium() {
   autoGrowInput(amountInput);
   autoGrowInput(nameInput);
 
-  const dedicateButton = createButton("Make Dedication");
+  const dedicateButton = createButton("Make Dedication").parent(centerCol);
   dedicateButton.mousePressed(handleDedicate);
   dedicateButton.class("dedicate-btn");
 
-  statusText = createP("");
-  statusText.style("color", "#667");  
+  statusText = createP("").parent(centerCol);
+  statusText.style("color", "#889");  
   
-  // Send a join announcement so the GM updates our local client count state counters
   channel.send({
     type: "broadcast",
     event: EVENTS.JOIN,
     payload: { player: playerName }
   });
+}
+
+function renderDedicationsLists(dedicationMax) {
+  if (!window.podiumUiRendered) return;
+  
+  let fromHtml = "";
+  let toHtml = "";
+  
+  for (const p of players) {
+    if (p === playerName) continue;
+    let amt = dedicationMax[p] && dedicationMax[p][playerName] ? dedicationMax[p][playerName] : 0;
+    if (amt > 0) {
+      fromHtml += `<p>${p}: <b>${formatMuffins(amt)}</b></p>`;
+    }
+  }
+  
+  let myDeds = dedicationMax[playerName];
+  if (myDeds) {
+    for (const p of players) {
+      if (p === playerName) continue;
+      let amt = myDeds[p] || 0;
+      if (amt > 0) {
+        toHtml += `<p>${p}: <b>${formatMuffins(amt)}</b></p>`;
+      }
+    }
+  }
+
+  document.getElementById('from-list').innerHTML = fromHtml || "<p style='color:#777'>(none yet)</p>";
+  document.getElementById('to-list').innerHTML = toHtml || "<p style='color:#777'>(none yet)</p>";
 }
 
 function autoGrowInput(inputElem) {
@@ -320,7 +381,7 @@ function checkForDuplicateName() {
 
 function pressesLabel() {
   if (Number.isFinite(pressesRemainingLocal)){
-    return `${pressesRemainingLocal} / ${MAX_PRESSES} presses left`;
+    return `${pressesRemainingLocal} / ${maxPresses} presses left`;
   }
   else{
     return "awaiting data update...";

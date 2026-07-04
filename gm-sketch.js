@@ -18,7 +18,7 @@ let addPlayerInput;
 let requestedNamesQueue = []; // Holds strings of incoming requests
 let requestElements = [];     // Holds the DOM buttons we render
 
-let gameStatus;       // "waiting" | "running" | "finished"
+let gameStatus;       // "running" | "finished"
 let pressesRemaining; // { playerName: number }
 let currentRunner;    // playerName | null
 let timerEndTime;     // ms epoch timestamp | null
@@ -31,10 +31,7 @@ let channel;
 let channelStatusText = "connecting...";
 
 let timeSpeedMultiplier = 10;
-
 let buttonPressFlash = 0;
-
-
 
 // FIREWORKS I MADE FROM LIKE... IDK. COVID DAYS. 7TH GRADE? LOLLLLLL
 let ganime = 0;
@@ -128,31 +125,22 @@ class FireworkParticle {
 }
 
 let qrImg;
-let cnv; // <-- Declare it here globally
+let cnv; 
 
 function preload() {
   qrImg = loadImage('join_qrcode.png');
 }
 
-
 async function setup() {
-  // Connect to Supabase FIRST, before the password gate below.
-  // This is the actual GM device the moment the page loads, and
-  // players' JOIN/REQUEST_ROSTER messages need something listening
-  // right away — they shouldn't have to wait on a human typing a
-  // password. The password only needs to gate rendering/controls,
-  // not whether this browser is subscribed to the channel.
   createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
-  resetGameState();
   connectToSupabase();
 
   isAuthenticated = await checkGMPasswordHashed();
   if (!isAuthenticated) {
-    return; // Only blocks what's below (rendering/controls), not the connection above
+    return;
   }
 
-  // Create the "Add Player" textbox in the bottom right
   addPlayerInput = createInput("");
   addPlayerInput.attribute("placeholder", "Add player name...");
   addPlayerInput.style("position", "fixed");
@@ -165,9 +153,8 @@ async function setup() {
   addPlayerInput.style("color", "#fff");
   addPlayerInput.style("border", "1px solid #555");
   addPlayerInput.style("border-radius", "4px");
-  addPlayerInput.style("z-index", "10000"); // Make sure it sits on top of the canvas
+  addPlayerInput.style("z-index", "10000"); 
 
-  // Listen for the Enter key to register the new player
   addPlayerInput.elt.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -178,7 +165,6 @@ async function setup() {
 
 async function checkGMPasswordHashed() {
   return new Promise((resolve) => {
-    // 1. Create a dark fullscreen interface blocker container
     let overlay = createDiv();
     
     overlay.style('position', 'fixed');
@@ -189,30 +175,45 @@ async function checkGMPasswordHashed() {
     overlay.style('background', '#121212');
     overlay.style('border-radius', '12px');
     overlay.style('box-shadow', '0 0 40px rgba(0,0,0,0.8)');
-    // remove the 100vw/100vh lines entirely
 
-    overlay.style('background', '#121212'); // Deep dark mode matching style.css
     overlay.style('display', 'flex'); overlay.style('flex-direction', 'column');
     overlay.style('justify-content', 'center'); overlay.style('align-items', 'center');
-    overlay.style('gap', '15px'); // Creates even spacing down the row
+    overlay.style('gap', '15px'); 
     overlay.style('z-index', '99999');
     overlay.style('font-family', 'monospace');
 
-    // 2. Row item 1: Text Header
     let qrLabel = createP("QR CODE FOR PLAYERS:").parent(overlay);
     qrLabel.style('color', '#ffffff'); qrLabel.style('font-size', '24px'); qrLabel.style('margin', '0');
 
-    // 3. Row item 2: Native HTML image loading the PNG file directly
     let qrCodeImg = createImg('join_qrcode.png', 'Player QR Code').parent(overlay);
     qrCodeImg.style('width', '300px');
     qrCodeImg.style('height', '300px');
-    qrCodeImg.style('margin-bottom', '20px'); // Give some extra padding before the password section
+    qrCodeImg.style('margin-bottom', '20px');
 
-    // 4. Row item 3: Password notice heading
+    let settingsLabel = createP("SETTINGS FOR GAME:").parent(overlay);
+    settingsLabel.style('color', '#ffffff'); settingsLabel.style('font-size', '18px'); settingsLabel.style('margin', '0');
+
+    let settingsRow = createDiv().parent(overlay);
+    settingsRow.style('display', 'flex'); settingsRow.style('gap', '10px');
+
+    let muffinInput = createInput("6").parent(settingsRow);
+    muffinInput.attribute("placeholder", "Max Muffins");
+    muffinInput.style('padding', '8px'); muffinInput.style('font-size', '16px'); muffinInput.style('width', '120px');
+    muffinInput.style('text-align', 'center'); muffinInput.style('background', '#222'); muffinInput.style('color', '#fff'); muffinInput.style('border', '1px solid #555'); muffinInput.style('border-radius', '4px');
+
+    let timerInput = createInput("100").parent(settingsRow);
+    timerInput.attribute("placeholder", "Timer Seconds");
+    timerInput.style('padding', '8px'); timerInput.style('font-size', '16px'); timerInput.style('width', '120px');
+    timerInput.style('text-align', 'center'); timerInput.style('background', '#222'); timerInput.style('color', '#fff'); timerInput.style('border', '1px solid #555'); timerInput.style('border-radius', '4px');
+
+    let pressesInput = createInput("5").parent(settingsRow);
+    pressesInput.attribute("placeholder", "Max Presses");
+    pressesInput.style('padding', '8px'); pressesInput.style('font-size', '16px'); pressesInput.style('width', '120px');
+    pressesInput.style('text-align', 'center'); pressesInput.style('background', '#222'); pressesInput.style('color', '#fff'); pressesInput.style('border', '1px solid #555'); pressesInput.style('border-radius', '4px');
+
     let passLabel = createP("PASSWORD FOR GAME MASTER:").parent(overlay);
-    passLabel.style('color', '#ffffff'); passLabel.style('font-size', '24px'); passLabel.style('margin', '0');
+    passLabel.style('color', '#ffffff'); passLabel.style('font-size', '24px'); passLabel.style('margin', '15px 0 0 0');
 
-    // 5. Row item 4: Interactive masked password block
     let passInput = createInput("").parent(overlay);
     passInput.attribute("type", "password");
     passInput.style('padding', '10px 15px'); 
@@ -228,9 +229,19 @@ async function checkGMPasswordHashed() {
     const submitPass = async () => {
       const entered = passInput.value().trim();
       
-      // Compute and run against the global shared hash variable
       if (await sha256HashHex(entered) === gameMasterPasswordHash) {
-        overlay.remove(); // Burn layouts entirely out of memory
+        maxMuffins = parseFloat(muffinInput.value()) || 6;
+        runDurationSeconds = parseFloat(timerInput.value()) || 100;
+        maxPresses = parseInt(pressesInput.value()) || 5; // ADD THIS LINE
+        
+        channel.send({
+          type: "broadcast",
+          event: EVENTS.SETTINGS_SYNC,
+          payload: { maxMuffins, runDurationSeconds, maxPresses } // ADD maxPresses HERE
+        });
+        
+        resetGameState();
+        overlay.remove(); 
         resolve(true);
       } else {
         alert("Access Denied.");
@@ -239,7 +250,6 @@ async function checkGMPasswordHashed() {
       }
     };
 
-    // Bind keystroke capture
     passInput.elt.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -250,23 +260,22 @@ async function checkGMPasswordHashed() {
 }
 
 function resetGameState() {
-  gameStatus = "waiting";
+  gameStatus = "running";
   currentRunner = null;
-  timerEndTime = null;
+  timerEndTime = Date.now() + runDurationSeconds * 1000;
   winner = null;
 
   pressesRemaining = {};
   dedicationMax = {};
   dedicationLog = [];
 
-  // Reset particles
   f = [];
   p = [];
 
-  for (const p of PLAYERS) {
-    pressesRemaining[p] = MAX_PRESSES;
+  for (const p of players) {
+    pressesRemaining[p] = maxPresses;
     dedicationMax[p] = {};
-    for (const q of PLAYERS) {
+    for (const q of players) {
       dedicationMax[p][q] = 0;
     }
   }
@@ -291,11 +300,20 @@ function connectToSupabase() {
     channel.send({
       type: "broadcast",
       event: "ROSTER_SYNC",
-      // ─── FIX: Send the presses along with the roster ───
       payload: { 
-        currentPlayers: PLAYERS,
+        currentPlayers: players,
         pressesRemaining: pressesRemaining 
       }
+    });
+    channel.send({
+      type: "broadcast",
+      event: EVENTS.SETTINGS_SYNC,
+      payload: { maxMuffins, runDurationSeconds }
+    });
+    channel.send({
+      type: "broadcast",
+      event: EVENTS.DEDICATIONS_SYNC,
+      payload: { dedicationMax }
     });
   });
 
@@ -314,11 +332,9 @@ function connectToSupabase() {
   });
 }
 
-// ---- Message handlers -------------------------------------------------------
-
 function handleJoinMessage(payload) {
   const player = payload && payload.player;
-  const playerExists = PLAYERS.some((p) => p.toLowerCase() === (player || "").toLowerCase());
+  const playerExists = players.some((p) => p.toLowerCase() === (player || "").toLowerCase());
 
   if (!playerExists) {
     console.log(`Unrecognized player "${player}" tried to join.`);
@@ -331,11 +347,22 @@ function handleJoinMessage(payload) {
     payload: { player: player, pressesRemaining: pressesRemaining[player] }
   });
   
-  // ─── FIX: Bundle presses ───
   channel.send({
     type: "broadcast",
     event: "ROSTER_SYNC",
-    payload: { currentPlayers: PLAYERS, pressesRemaining: pressesRemaining }
+    payload: { currentPlayers: players, pressesRemaining: pressesRemaining }
+  });
+
+  channel.send({
+    type: "broadcast",
+    event: EVENTS.SETTINGS_SYNC,
+    payload: { maxMuffins, runDurationSeconds }
+  });
+  
+  channel.send({
+    type: "broadcast",
+    event: EVENTS.DEDICATIONS_SYNC,
+    payload: { dedicationMax }
   });
 }
 
@@ -343,18 +370,18 @@ function registerNewPlayer() {
   const newName = addPlayerInput.value().trim();
   if (!newName) return;
 
-  const exists = PLAYERS.some(p => p.toLowerCase() === newName.toLowerCase());
+  const exists = players.some(p => p.toLowerCase() === newName.toLowerCase());
   if (exists) {
     console.log(`Player "${newName}" is already in the game.`);
     addPlayerInput.value(""); 
     return;
   }
 
-  PLAYERS.push(newName);
-  pressesRemaining[newName] = MAX_PRESSES;
+  players.push(newName);
+  pressesRemaining[newName] = maxPresses;
   dedicationMax[newName] = {};
 
-  for (const existingPlayer of PLAYERS) {
+  for (const existingPlayer of players) {
     dedicationMax[existingPlayer][newName] = 0;
     dedicationMax[newName][existingPlayer] = 0;
   }
@@ -368,16 +395,22 @@ function registerNewPlayer() {
       payload: { approvedName: newName }
     });
 
-    // ─── FIX: Bundle presses ───
     channel.send({
       type: "broadcast",
       event: "ROSTER_SYNC",
-      payload: { currentPlayers: PLAYERS, pressesRemaining: pressesRemaining }
+      payload: { currentPlayers: players, pressesRemaining: pressesRemaining }
+    });
+
+    channel.send({
+      type: "broadcast",
+      event: EVENTS.DEDICATIONS_SYNC,
+      payload: { dedicationMax }
     });
   }
   
   addPlayerInput.value("");
 }
+
 function handlePressMessage(payload) {
   const rawPlayer = payload && payload.player;
 
@@ -386,7 +419,7 @@ function handlePressMessage(payload) {
     return;
   }
 
-  const player = PLAYERS.find(
+  const player = players.find(
     (p) => p.toLowerCase() === (rawPlayer || "").toLowerCase()
   );
 
@@ -400,11 +433,14 @@ function handlePressMessage(payload) {
     return;
   }
 
+  buttonPressFlash += 0.7; 
+
   pressesRemaining[player]--;
   currentRunner = player;
   gameStatus = "running";
-  timerEndTime = Date.now() + RUN_DURATION_SECONDS * 1000;
+  timerEndTime = Date.now() + runDurationSeconds * 1000;
 }
+
 function handleDedicateMessage(payload) {
   const player = payload && payload.player;
   const amount = payload && payload.amount;
@@ -414,7 +450,7 @@ function handleDedicateMessage(payload) {
     console.log(`${player} sent a dedication after the game had finished.`);
     return;
   }
-  if (!PLAYERS.includes(player)) {
+  if (!players.includes(player)) {
     console.log(`Received a dedication from unrecognized player "${player}".`);
     return;
   }
@@ -422,7 +458,7 @@ function handleDedicateMessage(payload) {
     console.log(`Received bad dedication data from ${player}.`);
     return;
   }
-  const recipient = PLAYERS.find(
+  const recipient = players.find(
     (p) => p.toLowerCase() === recipientRaw.toLowerCase()
   );
   if (!recipient) {
@@ -431,43 +467,49 @@ function handleDedicateMessage(payload) {
   }
 
   let currentTotalToOthers = 0;
-  for (const target of PLAYERS) {
+  for (const target of players) {
     if (target !== recipient) {
       currentTotalToOthers += (dedicationMax[player][target] || 0);
     }
   }
 
-  const allowedMaxForThisRecipient = MAX_MUFFINS - currentTotalToOthers;
-  if (allowedMaxForThisRecipient <= 0) {
-    console.log(`${player} has already hit their global ${MAX_MUFFINS}-muffin limit.`);
-    return;
-  }
-  let finalAmount = amount;
-  if (finalAmount > allowedMaxForThisRecipient) {
-    finalAmount = allowedMaxForThisRecipient;
-    console.log(`${player}'s dedication to ${recipient} was capped at ${finalAmount} to respect the ${MAX_MUFFINS}-muffin max.`);
-  }
-  const previousMax = dedicationMax[player][recipient];
-  if (finalAmount <= previousMax) {
-    console.log(`${player} tried to dedicate ${finalAmount} (capped) to ${recipient}, which doesn't exceed previous max of ${previousMax}.`);
+  if (amount + currentTotalToOthers > maxMuffins) {
+    channel.send({
+       type: "broadcast",
+       event: EVENTS.DEDICATE_ERROR,
+       payload: { player: player, message: `ERROR: Giving ${amount} more would exceed your limit of ${maxMuffins} total muffins.` }
+    });
+    console.log(`${player} hit their ${maxMuffins}-muffin max cap and was rejected.`);
     return;
   }
 
-  dedicationMax[player][recipient] = finalAmount;
+  const previousMax = dedicationMax[player][recipient];
+  if (amount <= previousMax) {
+    console.log(`${player} tried to dedicate ${amount} to ${recipient}, which doesn't exceed previous max of ${previousMax}.`);
+    return;
+  }
+
+  dedicationMax[player][recipient] = amount;
   dedicationLog = dedicationLog.filter(d => !(d.from === player && d.to === recipient));
   dedicationLog.push({
     time: Date.now(),
     from: player,
     to: recipient,
-    amount: finalAmount
+    amount: amount
+  });
+
+  channel.send({
+    type: "broadcast",
+    event: EVENTS.DEDICATIONS_SYNC,
+    payload: { dedicationMax }
   });
 }
+
 function handleNameRequest(payload) {
   const name = payload && payload.requestedName ? payload.requestedName.trim() : null;
   if (!name) return;
 
-  // ─── FIX: If they are already in the game, auto-approve them instantly ───
-  const existing = PLAYERS.find(p => p.toLowerCase() === name.toLowerCase());
+  const existing = players.find(p => p.toLowerCase() === name.toLowerCase());
   if (existing) {
     channel.send({
       type: "broadcast",
@@ -477,10 +519,7 @@ function handleNameRequest(payload) {
     return;
   }
 
-  // Skip if this exact name string is already sitting in the visible queue
   if (requestedNamesQueue.includes(name)) return;
-
-  // Append to stream
   requestedNamesQueue.push(name);
 
   const maxVisibleRequests = 1000;
@@ -491,7 +530,6 @@ function handleNameRequest(payload) {
   renderRequestConsole();
 }
 
-// ---- Rendering ----------------------------------------------------------------
 function draw() {
   if (!isAuthenticated) {
     drawWaitingRoom();
@@ -509,7 +547,6 @@ function draw() {
   drawConnectionStatus();
 }
 
-// --- RENDERING HOOKS FOR BACKGROUNDS & TRAIL GENERATION ---
 function drawWaitingRoom() {
   noStroke();
   for(let i = 0; i<3; i++){
@@ -522,23 +559,24 @@ function drawWaitingRoom() {
     rect(-1,-1,width+2,height+2);
   }
 }
+
 function drawBackground() {
+  buttonPressFlash *= 0.6; // Rapid decay
+
   if (gameStatus === "finished") {
-    // Semi-transparent overlay allows fireworks to leave motion trails
     fill(0, 40);
     rect(0, 0, width, height);
     runFireworkEngine();
   } 
   else if (currentRunner === null) {
-    background(50);
+    background(50 + 205 * buttonPressFlash);
   } 
   else {
-    background(255*buttonPressFlash);
+    background(255 * buttonPressFlash);
   }
 }
 
 function runFireworkEngine() {
-  // Incremental timing cycles
   if (ganime < 360) { ganime++; } else { ganime = 1; }
   if (sanime < 360) { sanime += 0.2; } else { sanime = 0.2; }
   
@@ -553,12 +591,10 @@ function runFireworkEngine() {
     }
   } 
   else if (round(sanime) === 330) {
-    // Giant type 3 clusters
     f.push(new FireworkRocket(100 + ((width - 200) / 10) * (ganime % 5), 3 * abs(ganime % 5 - 2) - 10, 3));
     f.push(new FireworkRocket(width-(100 + ((width - 200) / 10) * (ganime % 5)), 3 * abs(ganime % 5 - 2) - 10, 3));
   }
 
-  // Loop backward through active arrays to safely splice out expired values
   for (let i = f.length - 1; i >= 0; i--) {
     f[i].move();
     f[i].draw();
@@ -575,21 +611,22 @@ function checkWinCondition() {
   if (gameStatus === "running") {
     if (keyIsDown(RIGHT_ARROW)) {
       let normalFrameMs = 1000 / frameRate();
-      let warpedMs = normalFrameMs * (timeSpeedMultiplier - 1); // fast
+      let warpedMs = normalFrameMs * (timeSpeedMultiplier - 1); 
       timerEndTime -= warpedMs;
     }
     if (keyIsDown(LEFT_ARROW)) {
       let normalFrameMs = 1000 / frameRate();
-      let warpedMs = -2*normalFrameMs; // reverse
+      let warpedMs = -2*normalFrameMs; 
       timerEndTime -= warpedMs;
     }
 
     if (Date.now() >= timerEndTime) {
       gameStatus = "finished";
-      winner = currentRunner;
+      winner = currentRunner; 
     }
   }
 }
+
 function getRemainingSeconds() {
   if (gameStatus === "running") {
     return max(0, (timerEndTime - Date.now()) / 1000);
@@ -597,7 +634,7 @@ function getRemainingSeconds() {
   if (gameStatus === "finished") {
     return 0;
   }
-  return RUN_DURATION_SECONDS;
+  return runDurationSeconds;
 }
 
 function drawTimerAndRunner() {
@@ -616,13 +653,13 @@ function drawTimerAndRunner() {
   textSize(60);
   if (gameStatus === "finished") {
     fill(255, 182, 0);
-    text(`WINNER: ${winner}`, width / 2, 142);
+    text(winner ? `WINNER: ${winner}` : "WINNER: Nobody", width / 2, 142);
   } else if (currentRunner) {
     fill(getTimeColor());
     text(`Runner: ${currentRunner}`, width / 2, 142);
   } else {
     fill(150);
-    text("No runner yet", width / 2, 142);
+    text("Runner: nobody yet", width / 2, 142);
   }
 }
 
@@ -631,7 +668,7 @@ function playerListStartY() {
 }
 
 function playerListEndY() {
-  return playerListStartY() + 22 + PLAYERS.length * 35 + 35;
+  return playerListStartY() + 22 + players.length * 35 + 35;
 }
 
 function drawPlayerList() {
@@ -646,32 +683,28 @@ function drawPlayerList() {
   text("PLAYERS:", x, y);
   y += 35;
   
-  if (PLAYERS.length === 0) {
+  if (players.length === 0) {
     fill(120);
     text("(none yet)", x, y);
     return;
   }
 
-  // 1. Find the maximum text width across all player names
   let maxNameWidth = 0;
-  for (const p of PLAYERS) {
+  for (const p of players) {
     let w = textWidth(p);
     if (w > maxNameWidth) {
       maxNameWidth = w;
     }
   }
 
-  // 2. Render names and align statuses using the max width
-  const statusGap = 20; // Extra spacing gap between names and the dash
+  const statusGap = 20; 
   
-  for (const p of PLAYERS) {
+  for (const p of players) {
     const isRunner = p === currentRunner && gameStatus !== "finished";
     fill(isRunner ? getTimeColor() : color(200));
     
-    // Draw the name at the base X position
     text(p, x, y);
     
-    // Draw the aligned status offset past the widest name
     const statusX = x + maxNameWidth + statusGap;
     const statusTextString = "("+pressesRemaining[p]+" left)";
     text(statusTextString, statusX, y);
@@ -682,9 +715,10 @@ function drawPlayerList() {
 
 function countPayoutLines() {
   let n = 0;
-  for (const p of PLAYERS) {
+  if (!winner) return 0;
+  for (const p of players) {
     if (p === winner) continue;
-    if ((dedicationMax[winner][p] || 0) > 0) n++;
+    if ((dedicationMax[winner] && dedicationMax[winner][p]) > 0) n++;
   }
   return n + 1;
 }
@@ -695,6 +729,8 @@ function payoutEndY() {
 }
 
 function drawPayout() {
+  if (!winner) return;
+  
   textFont("monospace");
   textAlign(LEFT, TOP);
   textSize(28);
@@ -707,7 +743,7 @@ function drawPayout() {
   y += 35;
 
   let totalDedicated = 0;
-  for (const p of PLAYERS) {
+  for (const p of players) {
     if (p === winner) continue;
     const amt = dedicationMax[winner][p] || 0;
     if (amt > 0) {
@@ -716,7 +752,7 @@ function drawPayout() {
       totalDedicated += amt;
     }
   }
-  const winnerKeeps = MAX_MUFFINS - totalDedicated;
+  const winnerKeeps = maxMuffins - totalDedicated;
   text(`${winner} gets ${formatMuffins(winnerKeeps)} muffins and is the WINNER`, x, y);
 }
 
@@ -772,7 +808,7 @@ function drawConnectionStatus() {
 }
 
 function getTimeColor() {
-  let totalTime = RUN_DURATION_SECONDS * 1000;
+  let totalTime = runDurationSeconds * 1000;
   let timeLeft = max(0, timerEndTime - Date.now());
   let progress = timeLeft / totalTime;
   colorMode(HSB, 360, 100, 100);
@@ -782,13 +818,11 @@ function getTimeColor() {
 }
 
 function renderRequestConsole() {
-  // Clear previous DOM instances of the list
   for (let el of requestElements) {
     el.remove();
   }
   requestElements = [];
 
-  // Anchor placement configurations at the bottom left
   let currentX = 20;
   const currentY = height - 70;
 
@@ -801,7 +835,6 @@ function renderRequestConsole() {
     requestElements.push(title);
   }
 
-  // Map individual entries into interactive buttons
   for (let i = 0; i < requestedNamesQueue.length; i++) {
     const candidateName = requestedNamesQueue[i];
 
@@ -815,14 +848,11 @@ function renderRequestConsole() {
     btn.style("border-radius", "4px");
     btn.style("cursor", "pointer");
 
-    // 1. LEFT-CLICK: Approve and register the player
     btn.mousePressed((event) => {
-      // Check if it's a standard left-click (button 0)
       if (event.button === 0) {
         addPlayerInput.value(candidateName);
         registerNewPlayer();
 
-        // Remove from queue layout tracking
         requestedNamesQueue.splice(i, 1);
         renderRequestConsole();
       }
@@ -844,6 +874,6 @@ function renderRequestConsole() {
     });
 
     requestElements.push(btn);
-    currentX += btn.elt.offsetWidth + 12; // Slide x coordinate right for next item
+    currentX += btn.elt.offsetWidth + 12; 
   }
 }

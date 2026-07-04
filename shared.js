@@ -17,16 +17,16 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Every player page and the GM page join this same channel name.
 const CHANNEL_NAME = "muffin-game-channel";
 
-// ---- 2) GAME CONSTANTS -----------------------------------------------------
-const MAX_PRESSES = 5;
-const RUN_DURATION_SECONDS = 60;
-const MAX_MUFFINS = 24;
+// ---- 2) GAME CONSTANTS & VARIABLES ------------------------------------------
+let maxPresses = 5;
+let runDurationSeconds = 100;
+let maxMuffins = 6;
 
 
 // The players in this game. Edit this list for your session
 // (names here must exactly match, ignoring case, what you hand
 // out as ?player=NAME links, and what people type in dedications).
-let PLAYERS = []; //["Alice", "Bob", "Charlie"];
+let players = []; 
 
 // ---- 3) MESSAGE TYPES -------------------------------------------------------
 const EVENTS = {
@@ -36,7 +36,10 @@ const EVENTS = {
   STATE_SYNC: "state_sync",
   REQUEST_NAME: "request_name",
   APPROVE: "approve",
-  DENY: "deny"
+  DENY: "deny",
+  SETTINGS_SYNC: "settings_sync",
+  DEDICATIONS_SYNC: "dedications_sync",
+  DEDICATE_ERROR: "dedicate_error"
 };
 
 // ---- 4) DEDICATION TEXT FORMAT ----------------------------------------------
