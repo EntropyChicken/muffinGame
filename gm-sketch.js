@@ -1253,9 +1253,9 @@ function startNextRound() {
 	});
 }
 
-  function drawLeaderboard(){
-    push();
-  fill(0, 190);
+function drawLeaderboard(){
+  push();
+  fill(0, 220);
   rect(0, 0, width, height);
   fill(255);
   textAlign(CENTER, TOP);
