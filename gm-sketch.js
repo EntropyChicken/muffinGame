@@ -227,7 +227,6 @@ async function checkGMPasswordHashed() {
 
     let qrLabel = createP("PLAYER JOIN CODE:").parent(overlay);
     qrLabel.style('color', '#ffffff'); qrLabel.style('font-size', '24px'); qrLabel.style('margin', '0');
-    qrLabel.style("font-size","24px");
 
     let qrCodeImg = createImg('assets/join_qrcode.png', 'Player QR Code').parent(overlay);
     qrCodeImg.style('width', '300px');
@@ -235,8 +234,7 @@ async function checkGMPasswordHashed() {
     qrCodeImg.style('margin-bottom', '20px');
 
     let settingsLabel = createP("SETTINGS:").parent(overlay);
-    settingsLabel.style('color', '#ffffff'); settingsLabel.style('font-size', '18px'); settingsLabel.style('margin', '0');
-    settingsLabel.style("font-size","24px");
+    settingsLabel.style('color', '#ffffff'); settingsLabel.style('font-size', '24px'); settingsLabel.style('margin', '0');
 
     let settingsRow = createDiv().parent(overlay);
     settingsRow.style('display', 'flex'); settingsRow.style('gap', '10px');
@@ -256,9 +254,18 @@ async function checkGMPasswordHashed() {
     pressesInput.style('padding', '8px'); pressesInput.style('font-size', '16px'); pressesInput.style('width', '120px');
     pressesInput.style('text-align', 'center'); pressesInput.style('background', '#222'); pressesInput.style('color', '#fff'); pressesInput.style('border', '1px solid #555'); pressesInput.style('border-radius', '4px');
 
+    let toggleRow = createDiv().parent(overlay);
+    toggleRow.style('display', 'flex'); toggleRow.style('align-items', 'center'); toggleRow.style('gap', '10px');
+    toggleRow.style('margin-top', '5px');
+
+    let destroyCheckbox = createInput("", "checkbox").parent(toggleRow);
+    destroyCheckbox.elt.checked = destroyFirstPlaceOnNoWinner; // Set existing setting default
+
+    let checkboxLabel = createSpan("if no winner, destroy 1st place").parent(toggleRow);
+    checkboxLabel.style('color', '#aaa'); checkboxLabel.style('font-size', '14px');
+
     let passLabel = createP("PASSWORD:").parent(overlay);
     passLabel.style('color', '#ffffff'); passLabel.style('font-size', '24px'); passLabel.style('margin', '15px 0 0 0');
-    passLabel.style("font-size","24px");
 
     let passInput = createInput("").parent(overlay);
     passInput.attribute("type", "password");
@@ -281,10 +288,18 @@ async function checkGMPasswordHashed() {
         runDurationSeconds = parseFloat(timerInput.value()) || 60;
         maxPresses = parseInt(pressesInput.value()) || 5;
         
+        // Grab the boolean status right before sync
+        destroyFirstPlaceOnNoWinner = destroyCheckbox.elt.checked;
+        
         channel.send({
           type: "broadcast",
           event: EVENTS.SETTINGS_SYNC,
-          payload: { maxMuffins: encodeQuantityPayload(maxMuffins), runDurationSeconds, maxPresses }
+          payload: { 
+            maxMuffins: encodeQuantityPayload(maxMuffins), 
+            runDurationSeconds, 
+            maxPresses,
+            destroyFirstPlaceOnNoWinner // Broadcasting the rule down to players if needed
+          }
         });
         
         resetGameState();
@@ -460,11 +475,17 @@ function connectToSupabase() {
         requestedNamesQueue: requestedNamesQueue
       }
     });
-    channel.send({
-      type: "broadcast",
-      event: EVENTS.SETTINGS_SYNC,
-      payload: { maxPresses, maxMuffins: encodeQuantityPayload(maxMuffins), runDurationSeconds }
-    });
+    channel.on("broadcast", { event: EVENTS.SETTINGS_SYNC }, (msg) => {
+    if (msg.payload) {
+      maxMuffins = asQuantity(msg.payload.maxMuffins);
+      maxPresses = msg.payload.maxPresses;
+      runDurationSeconds = msg.payload.runDurationSeconds;
+      if (msg.payload.destroyFirstPlaceOnNoWinner !== undefined) {
+        destroyFirstPlaceOnNoWinner = msg.payload.destroyFirstPlaceOnNoWinner;
+      }
+      if (pressesText) pressesText.html(pressesLabel());
+    }
+  });
     channel.send({
       type: "broadcast",
       event: EVENTS.DEDICATIONS_SYNC,
@@ -927,21 +948,23 @@ function applyRoundPayout() {
 		playerWealth[winner.toLowerCase()] = (playerWealth[winner.toLowerCase()] || Quantity.zero()).add(maxMuffins.subtract(totalDedicated));
 	}
 	else {
-    // everyone tied for first place gets annihilated (back to zero wealth over all games)
-		let richestWealth = Quantity.zero();
-		for (const p of players) {
-			const wealth = asQuantity(playerWealth[p.toLowerCase()] || Quantity.zero());
-			if (wealth.isGreaterThan(richestWealth)) {
-				richestWealth = wealth;
-			}
-		}
+    // everyone tied for first place gets annihilated (back to zero wealth over all games) if the setting is checked off
+    if (destroyFirstPlaceOnNoWinner) {
+      let richestWealth = Quantity.zero();
+      for (const p of players) {
+        const wealth = asQuantity(playerWealth[p.toLowerCase()] || Quantity.zero());
+        if (wealth.isGreaterThan(richestWealth)) {
+          richestWealth = wealth;
+        }
+      }
 
-		for (const p of players) {
-			const wealth = asQuantity(playerWealth[p.toLowerCase()] || Quantity.zero());
-			if (wealth.isEqualTo(richestWealth)) {
-				playerWealth[p.toLowerCase()] = Quantity.zero();
-			}
-		}
+      for (const p of players) {
+        const wealth = asQuantity(playerWealth[p.toLowerCase()] || Quantity.zero());
+        if (wealth.isEqualTo(richestWealth)) {
+          playerWealth[p.toLowerCase()] = Quantity.zero();
+        }
+      }
+    }
 	}
 }
 

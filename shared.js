@@ -27,6 +27,7 @@ const channelName = "muffin-game-channel";
 let maxMuffins = Quantity.fromString("6");
 let runDurationSeconds = 60;
 let maxPresses = 5;
+let destroyFirstPlaceOnNoWinner = false;
 
 
 const SESSION_HEARTBEAT_INTERVAL_MS = 5000;
