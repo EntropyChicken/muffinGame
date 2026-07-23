@@ -1,6 +1,7 @@
 # Muffin Game
 
 An original game I came up with in order to write a story about game theory concepts falling apart under real-world behavior.
+
 <img src="assets/muffinGamesLogo1.2.png" width="300" alt="Muffin Game Logo" />
 
 ## Player Registration QR Code
